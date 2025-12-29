@@ -69,6 +69,11 @@ pub fn delete_task(file_name : &str, task_number : usize) -> std::io::Result<()>
 
     file.read_to_string(&mut content)?;
 
+    if content.lines().count() < get_total_length_of_file(file_name) {
+        println!("Enter an valid task number to perform this action.");
+        return Ok(())
+    }
+
     for (index, line) in content.lines().enumerate() {
         if index == task_number {
             continue;

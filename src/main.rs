@@ -1,5 +1,6 @@
 use core::panic;
 use std::{io::{Read, Write}};
+use colored_text::Colorize;
 
 /*
  * create_file() : creating file if the file doesn't exist.
@@ -38,13 +39,20 @@ fn open_file(file_name : &str) -> bool {
 /*
  * read_todo_file() : reads from the todo file and prints it to terminal.
 */
-fn read_todo_file(file_name: &String) {
+fn read_file(file_name: &str) {
     let mut file = std::fs::File::open(file_name).expect("[#] An issue occured while opening the file");
     let mut content = String::new();
     let _ = file.read_to_string(&mut content).expect("[#] An issue occurred while reading the content of the file.");
 
+    println!("{}", "TODOS".magenta().bold());
+
     for line in content.lines() {
-        println!("{line}");
+        if line.starts_with("• [x]") {
+            println!("{}", line.green().strikethrough())
+        } 
+        else {
+            println!("{}", line);
+        }
     }
 }
 
@@ -55,6 +63,7 @@ fn add_task(file_name: &String, task: String) {
     let mut file = std::fs::OpenOptions::new().append(true).open(file_name).expect("[#] An issue occured while opening the file.");
     let mtask = String::from("• [ ] ".to_string() + &task + "\n");
     let _ = file.write(mtask.as_bytes()).expect("[#] An issue occurred while adding a task.");
+    read_file(&file_name);
 }
 
 /*
@@ -64,7 +73,7 @@ fn delete_task(file_name : &str, task_number : usize) {
     let mut content = String::new();
     let mut vector = std::vec::Vec::new();
 
-    match &mut std::fs::File::open(file_name) {
+    match &mut std::fs::File::open(&file_name) {
         Ok(file) => {
             let _ = file.read_to_string(&mut content);
 
@@ -72,8 +81,9 @@ fn delete_task(file_name : &str, task_number : usize) {
                 if index == (task_number - 1) {
                     continue; 
                 }
-
-                vector.push(line);
+                else {
+                    vector.push(line);
+                }
             }
         }
         Err(_err) => {
@@ -88,17 +98,18 @@ fn delete_task(file_name : &str, task_number : usize) {
                         .open(file_name)
                         .expect("[!] An issue occurred at delete_task() where trunncate is performed on a file.");
 
-    // Writing data inside the vector to file.
-    match &mut std::fs::File::open(file_name) {
+    // Appending modified data to the cleaned file.
+    match &mut std::fs::OpenOptions::new().write(true).append(true).open(file_name) {
         Ok(file) => {
-            for item in vector {
+            for item in vector.iter_mut() {
                 let line = item.to_string() + "\n";
                 let _ = file.write(line.as_bytes());
-                println!("{item}");
             }
+
+            read_file(file_name);
         }
         Err(_err) => {
-            panic!("[!] An error occurred at complete_task while adding data to file.")
+            panic!("[!] An issue occurred at task_complete() where writing to file is performed.");
         }
     }
 }
@@ -163,8 +174,9 @@ fn complete_task(file_name : &String, task: usize) {
             for item in vector.iter_mut() {
                 let line = item.to_string() + "\n";
                 let _ = file.write(line.as_bytes());
-                println!("{item}");
             }
+
+            read_file(file_name);
         }
         Err(_err) => {
             panic!("[!] An issue occurred at task_complete() where writing to file is performed.");
@@ -187,7 +199,7 @@ fn empty_file(file_name : &str) -> bool {
 
 fn main() {
     // Todo file name
-    let file_name = String::from("todo.txt");
+    let file_name = String::from("todo.list");
 
     // Creating file if it doesn't exist.
     if open_file(&file_name) == false {
@@ -198,7 +210,7 @@ fn main() {
     let args : Vec<String> = std::env::args().collect();
 
     if args.len() < 2 {
-        read_todo_file(&file_name);
+        read_file(&file_name);
     }
     else if args.len() == 3 && args[1].contains("delete") {
         let task_number : usize = args[2].parse().unwrap();
@@ -221,7 +233,7 @@ fn main() {
         }
     }
     else if args.len() == 2 && args[1].contains("read") {
-        read_todo_file(&file_name);
+        read_file(&file_name);
     }
     else if args.len() == 3 && args[1].contains("add") {
         add_task(&file_name, args[2].to_string());
